@@ -2,10 +2,14 @@
 % needs input mesh from GMSH(version 3.06) 
 % Coded by : Dr. Ir. H.Wang  h.wang6@tue.nl
 % Building Acoustics group of Department of the Built Environment;Eindhoven University of Technology
+
+%% Initialization
 clear all; warning off;
 close all;
 % gpuDevice(2)
 addpath(genpath('./DG_source'))
+
+%% Simulation and computation parameters
 rho0=1.2; c0=343; fmax=500;
 Globals3D;
 tol = 1e-8;  op_record=1;
@@ -13,26 +17,37 @@ xs = 27.995; ys = 5.6; zs=1.2;  % sound source location
 halfwidth=0.17;  % half band width of initial Gaussian sound pulse
 num_bc=3; % number of reflective impedance boundary conditions
 Tnum_bc=0; % number of transmissive boundary conditions
-%% set spatial polynomial order and time integrationi order
+useGPU = false;  % use gpu for computations or not, if true all arrays are converted to gpuArray
+
+
+%% Set spatial polynomial order and time integrationi order
 CFLfac=0.9; % CFL constant
 orderT=5;% time order
- N=5;  % spatial order
-totime =0.5; %total simulation time: physical time = totime/c0;
+N=5;  % spatial order
+totime =0.05; %total simulation time: physical time = totime/c0;
+
+
 %% Load Mesh and setup
 filename = 'CoarseMesh'; %% CoarseMesh or FineMesh
 msh_file = strcat('./mesh/',filename,'.msh');
 mesh_T = load_gmsh_QT(msh_file);
 Setup_mesh3D;
 StartUp3Dmy_local;
-%% set initial condition
+
+
+%% Set initial condition
 P=exp(-log(2)*( ((x-xs).^2 + (y-ys).^2 + (z-zs).^2)/halfwidth^2));
 U= zeros(Np, K); V = zeros(Np, K); W = zeros(Np, K);
+
+
 %% Set time steps and time interval
-Gdt1 = gpuArray(dtscale*CFLfac*(1/c0)/(2*N+1)); %with timescale considered 
+Gdt1 = setArrayType(dtscale*CFLfac*(1/c0)/(2*N+1), useGPU); %with timescale considered 
 dt1=gather(Gdt1);
 time = 0;
 nTimeLevels = floor(floor(totime/Gdt1/c0))
-%% set locations where the acoustic pressure are to be recorded (as an example)
+
+
+%% Set locations where the acoustic pressure are to be recorded (as an example)
 nrec=9;
 rec_x=[25.795;24.395;22.195;20.795;18.595;17.195;14.995;13.595;11.395];
 rec_y=5.6*ones(nrec,1);
@@ -40,23 +55,32 @@ nrec=11;
 rec_x=[rec_x;25.795;24.395;];
 rec_y=[rec_y;7.4;7.4;];
 rec_z=1.2*ones(nrec,1);
-%% recording setup
-%Find in which element that coordinate is found:
+
+
+%% Recording setup
+% Find in which element that coordinate is found:
 if op_record~=0
     [gVM, kth] = Sample3D(rec_x, rec_y, rec_z);
 %gVM is the interpolating matrix you can multiply times the solution of the acoustics variables of the kth element and record in time (t):
     prec=zeros(length(rec_x),nTimeLevels);% urec=zeros(length(rec_x),nTimeLevels);
 end
 
-%%
+%% Setup system matrices
 Setup_upwind3D; %% pre-calculate some constants
 SetupMultiImp1st;  % set multipole parameter values in impedance boundary condition
+
 GPUdec3DRandTADER_local; % convert all variables as GPU array
+
+
 %% 
 Gu=GU;Gp=GP;Gv=GV;Gw=GW;
+fprintf('\n')
 for GtimeLevel = 1:GnTimeLevels  % main time marching loop
+        time_step_starttime = tic();
+
         for m=1:orderT
-%%
+         time_substep_starttime = tic();
+%%  
          Gdu(:)=Gu(GvmapM)-Gu(GvmapP);
          Gdv(:)=Gv(GvmapM)-Gv(GvmapP);
          Gdw(:)=Gw(GvmapM)-Gw(GvmapP);
@@ -112,12 +136,17 @@ for GtimeLevel = 1:GnTimeLevels  % main time marching loop
         % compute physical spatial derivatives using the chain rule
         % The main cost come from volume integral evaluation, such as terms
         % Grx.*(GDr*Gu), Gsx.*(GDs*Gu), etc. in the following
+        physical_spatial_derivatives_startime = tic();
         Gtp=Gp;
         Gp = -Gc0^2*Grho0*(Grx.*(GDr*Gu)+Gsx.*(GDs*Gu)+Gtx.*(GDt*Gu)+Gry.*(GDr*Gv)+Gsy.*(GDs*Gv)+Gty.*(GDt*Gv)+Grz.*(GDr*Gw)+Gsz.*(GDs*Gw)+Gtz.*(GDt*Gw))...
             + GLIFT*(GFscale.*Gfluxp);
         Gu = -1/Grho0*(Grx.*(GDr*Gtp)+Gsx.*(GDs*Gtp)+Gtx.*(GDt*Gtp)) + GLIFT*(GFscale.*Gfluxu);
         Gv = -1/Grho0*(Gry.*(GDr*Gtp)+Gsy.*(GDs*Gtp)+Gty.*(GDt*Gtp)) + GLIFT*(GFscale.*Gfluxv);
         Gw = -1/Grho0*(Grz.*(GDr*Gtp)+Gsz.*(GDs*Gtp)+Gtz.*(GDt*Gtp)) + GLIFT*(GFscale.*Gfluxw);
+        physical_spatial_derivatives_time = toc(physical_spatial_derivatives_startime);
+        fprintf('Physical spatial derivatives: ......................... %fs\n', physical_spatial_derivatives_time);
+
+
 %% time integration updates
         GU =GU+Gdt1^(m)/factorial(m)*Gu; 
         GV =GV+Gdt1^(m)/factorial(m)*Gv;
@@ -139,14 +168,22 @@ for GtimeLevel = 1:GnTimeLevels  % main time marching loop
         end  
         GRPHI3 =GRPHI3+Gdt1^(m)/factorial(m)*GRphi3;
 
+        time_substep_time = toc(time_substep_starttime);
+        fprintf('Time substep: ......................................... %fs\n', time_substep_time);
+
         end
     Gu=GU;Gp=GP;Gv=GV;Gw=GW;
     GRphi1=GRPHI1;     GRphi3=GRPHI3; GRphi2=GRPHI2; 
-    Gtime = (Gtime+Gdt1*Gc0)
-     Gprec(:,GtimeLevel) = diag(GgVM*Gp(:,Gkth));
+    Gtime = (Gtime+Gdt1*Gc0);
+    Gprec(:,GtimeLevel) = diag(GgVM*Gp(:,Gkth));
 
+    time_step_time = toc(time_step_starttime);
+    fprintf('Time step: ............................................ %fs\n', time_step_time);
+    
+    fprintf('\nGtime: %fs\n\n', Gtime)
 
 end
 
-prec=gather(Gprec); %% output of the whole simulation
-time=gather(Gtime);
+% Convert arrays to cpu arrays
+prec=setArrayType(Gprec, false); %% output of the whole simulation
+time=setArrayType(Gtime, false);
