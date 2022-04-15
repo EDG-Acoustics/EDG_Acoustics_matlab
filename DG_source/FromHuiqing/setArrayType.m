@@ -33,9 +33,18 @@ function newA = setArrayType(A, setGPU)
     end
 
     % Check inputs
-    if ~islogical(setGPU)
-        error('setArrayType :: setGPU must be a logical.');
+
+    % Check convertion flag type
+    if (~islogical(setGPU) || ~isequal(size(setGPU), [1, 1]))
+        error('edg_A:setArrayType:setGPUError', 'setArrayType :: setGPU must be a a single value logical.');
     end
+
+    % Check input array type
+    if ~isnumeric(A)
+        error('edg_A:setArrayType:ATypeError', 'setArrayType :: input array must be numeric.');
+    end
+
+
         
     % Convert the input array if not already the requested type
     if (setGPU && ~isgpuarray(A))
