@@ -1,0 +1,10 @@
+# Treat mex files as binary to avoid breaking them
+
+# Linux mex
+*.mexa64 binary
+
+# Windows mex
+*.mexw64 binary
+
+# Mac mex
+*.mexmaci64 binary
