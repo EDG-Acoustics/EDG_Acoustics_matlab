@@ -1,3 +1,8 @@
+%%
+% Copyright 2022 Netherlands eScience Center and Building Acoustics group 
+% % of Department of the Built Environment, Eindhoven University of Technology
+% Licensed under the Apache License, version 2.0. See LICENSE for details.
+
 %% Tests setArrayType conversion to gpu and cpu arrays
 
 function tests = arrayTypeConversionTest()  % the name must be the same as the file
