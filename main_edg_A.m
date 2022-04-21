@@ -12,7 +12,7 @@
 clear all; warning off;
 close all;
 % gpuDevice(2)
-addpath(genpath('./DG_source'))w
+addpath(genpath('./DG_source'))
 
 %% Simulation and computation parameters
 rho0=1.2; c0=343; fmax=500;
