@@ -1,8 +1,12 @@
+%%
+% Copyright 2022 Department of the Built Environment, Eindhoven University of Technology
+% Licensed under the Apache License, version 2.0. See LICENSE for details.
+
 function BuildBCMaps2D()
 
 % function BuildMaps2DBC
 % Purpose: Build specialized nodal maps for various types of
-%          boundary conditions, specified in BCType. 
+%          boundary conditions, specified in BCType.
 
 Globals2D;
 

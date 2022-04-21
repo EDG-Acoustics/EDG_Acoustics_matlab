@@ -1,3 +1,9 @@
+%%
+% Copyright 2022 Netherlands eScience Center and Department of the Built
+% Environment, Eindhoven University of Technology
+% Licensed under the Apache License, version 2.0. See LICENSE for details.
+
+
 function newA = setArrayType(A, setGPU)
 % SETARRAYTYPE Sets the type of the array as GPU array or CPU array.
 %
@@ -44,8 +50,6 @@ function newA = setArrayType(A, setGPU)
         error('edg_A:setArrayType:ATypeError', 'setArrayType :: input array must be numeric.');
     end
 
-
-        
     % Convert the input array if not already the requested type
     if (setGPU && ~isgpuarray(A))
         newA = gpuArray(A);
@@ -57,4 +61,3 @@ function newA = setArrayType(A, setGPU)
         newA = A;
     end
 end
-

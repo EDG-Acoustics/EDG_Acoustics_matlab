@@ -1,3 +1,8 @@
+
+The code in this repository is released under the Apache 2.0 License (see below),
+except wherever stated otherwise.
+
+
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -186,7 +191,7 @@
       same "printed page" as the copyright notice for easier
       identification within third-party archives.
 
-   Copyright 2022 Netherlands eScience Center and Building Acoustics group 
+   Copyright 2022 Netherlands eScience Center and Building Acoustics group
    of Department of the Built Environment, Eindhoven University of Technology
 
    Licensed under the Apache License, Version 2.0 (the "License");
