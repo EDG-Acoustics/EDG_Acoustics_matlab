@@ -8,3 +8,6 @@
 
 # Mac mex
 *.mexmaci64 binary
+
+# Image files for figures
+*.jpg binary
