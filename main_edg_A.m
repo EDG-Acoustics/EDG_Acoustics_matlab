@@ -9,8 +9,8 @@
 % Building Acoustics group of Department of the Built Environment;Eindhoven University of Technology
 
 %% Initialization
-clear all; warning off;
-close all;
+%clear all; warning off;
+%close all;
 % gpuDevice(2)
 addpath(genpath('./DG_source'))
 
@@ -23,13 +23,13 @@ halfwidth=0.17;  % half band width of initial Gaussian sound pulse
 num_bc=3; % number of reflective impedance boundary conditions
 Tnum_bc=0; % number of transmissive boundary conditions
 useGPU = false;  % use gpu for computations or not, if true all arrays are converted to gpuArray
-
+useSingle = false;  % use single precision in computations
 
 %% Set spatial polynomial order and time integrationi order
 CFLfac=0.9; % CFL constant
 orderT=5;% time order
 N=5;  % spatial order
-totime =0.05; %total simulation time: physical time = totime/c0;
+totime = 4.0; %total simulation time: physical time = totime/c0;
 
 
 %% Load Mesh and setup
@@ -46,7 +46,7 @@ U= zeros(Np, K); V = zeros(Np, K); W = zeros(Np, K);
 
 
 %% Set time steps and time interval
-Gdt1 = setArrayType(dtscale*CFLfac*(1/c0)/(2*N+1), useGPU); %with timescale considered
+Gdt1 = setArrayType(dtscale*CFLfac*(1/c0)/(2*N+1), useGPU, useSingle); %with timescale considered
 dt1=gather(Gdt1);
 time = 0;
 nTimeLevels = floor(floor(totime/Gdt1/c0))
@@ -194,5 +194,5 @@ for GtimeLevel = 1:GnTimeLevels  % main time marching loop
 end
 
 % Convert arrays to cpu arrays
-prec=setArrayType(Gprec, false); %% output of the whole simulation
-time=setArrayType(Gtime, false);
+prec=setArrayType(Gprec, false, false); %% output of the whole simulation
+time=setArrayType(Gtime, false, false);
