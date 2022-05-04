@@ -9,9 +9,10 @@
 % Building Acoustics group of Department of the Built Environment;Eindhoven University of Technology
 
 %% Initialization
-%clear all; warning off;
-%close all;
+clear all; warning off;
+close all;
 % gpuDevice(2)
+gpu = gpuDevice;
 addpath(genpath('./DG_source'))
 
 %% Simulation and computation parameters
@@ -22,14 +23,14 @@ xs = 27.995; ys = 5.6; zs=1.2;  % sound source location
 halfwidth=0.17;  % half band width of initial Gaussian sound pulse
 num_bc=3; % number of reflective impedance boundary conditions
 Tnum_bc=0; % number of transmissive boundary conditions
-useGPU = false;  % use gpu for computations or not, if true all arrays are converted to gpuArray
-useSingle = false;  % use single precision in computations
+useGPU = true;  % use gpu for computations or not, if true all arrays are converted to gpuArray
+useSingle = true;  % use single precision in computations
 
 %% Set spatial polynomial order and time integrationi order
 CFLfac=0.9; % CFL constant
 orderT=5;% time order
-N=5;  % spatial order
-totime = 4.0; %total simulation time: physical time = totime/c0;
+N=10;  % spatial order
+totime = 0.05; %total simulation time: physical time = totime/c0;
 
 
 %% Load Mesh and setup
@@ -148,11 +149,13 @@ for GtimeLevel = 1:GnTimeLevels  % main time marching loop
         Gu = -1/Grho0*(Grx.*(GDr*Gtp)+Gsx.*(GDs*Gtp)+Gtx.*(GDt*Gtp)) + GLIFT*(GFscale.*Gfluxu);
         Gv = -1/Grho0*(Gry.*(GDr*Gtp)+Gsy.*(GDs*Gtp)+Gty.*(GDt*Gtp)) + GLIFT*(GFscale.*Gfluxv);
         Gw = -1/Grho0*(Grz.*(GDr*Gtp)+Gsz.*(GDs*Gtp)+Gtz.*(GDt*Gtp)) + GLIFT*(GFscale.*Gfluxw);
+        wait(gpu);    % ensure it has completed
         physical_spatial_derivatives_time = toc(physical_spatial_derivatives_startime);
         fprintf('Physical spatial derivatives: ......................... %fs\n', physical_spatial_derivatives_time);
 
         matrix_matrix_multiplication_startime = tic();
         ZZ = Grx.*(GDr*Gu);
+        wait(gpu);    % ensure it has completed
         matrix_matrix_multiplication_time = toc(matrix_matrix_multiplication_startime);
         fprintf('Matrix matrix multiplication: ......................... %fs\n', matrix_matrix_multiplication_time);
 
@@ -176,7 +179,8 @@ for GtimeLevel = 1:GnTimeLevels  % main time marching loop
             GRphi3(:,Gi_Rpole)=Gou3-GRlambda3(Gi_Rpole)*GRphi3(:,Gi_Rpole);
         end
         GRPHI3 =GRPHI3+Gdt1^(m)/factorial(m)*GRphi3;
-
+        
+        wait(gpu);    % ensure it has completed
         time_substep_time = toc(time_substep_starttime);
         fprintf('Time substep: ......................................... %fs\n', time_substep_time);
 
