@@ -12,7 +12,6 @@
 clear all; warning off;
 close all;
 % gpuDevice(2)
-gpu = gpuDevice;
 addpath(genpath('./DG_source'))
 
 %% Simulation and computation parameters
@@ -23,8 +22,13 @@ xs = 27.995; ys = 5.6; zs=1.2;  % sound source location
 halfwidth=0.17;  % half band width of initial Gaussian sound pulse
 num_bc=3; % number of reflective impedance boundary conditions
 Tnum_bc=0; % number of transmissive boundary conditions
-useGPU = true;  % use gpu for computations or not, if true all arrays are converted to gpuArray
-useSingle = true;  % use single precision in computations
+useGPU = false;  % use gpu for computations or not, if true all arrays are converted to gpuArray
+useSingle = false;  % use single precision in computations
+
+%% Get GPU information
+if useGPU
+    gpu = gpuDevice;
+end
 
 %% Set spatial polynomial order and time integrationi order
 CFLfac=0.9; % CFL constant
@@ -149,13 +153,21 @@ for GtimeLevel = 1:GnTimeLevels  % main time marching loop
         Gu = -1/Grho0*(Grx.*(GDr*Gtp)+Gsx.*(GDs*Gtp)+Gtx.*(GDt*Gtp)) + GLIFT*(GFscale.*Gfluxu);
         Gv = -1/Grho0*(Gry.*(GDr*Gtp)+Gsy.*(GDs*Gtp)+Gty.*(GDt*Gtp)) + GLIFT*(GFscale.*Gfluxv);
         Gw = -1/Grho0*(Grz.*(GDr*Gtp)+Gsz.*(GDs*Gtp)+Gtz.*(GDt*Gtp)) + GLIFT*(GFscale.*Gfluxw);
-        wait(gpu);    % ensure it has completed
+        
+        if useGPU
+            wait(gpu);    % ensure it has completed
+        end
+        
         physical_spatial_derivatives_time = toc(physical_spatial_derivatives_startime);
         fprintf('Physical spatial derivatives: ......................... %fs\n', physical_spatial_derivatives_time);
 
         matrix_matrix_multiplication_startime = tic();
         ZZ = Grx.*(GDr*Gu);
-        wait(gpu);    % ensure it has completed
+
+        if useGPU
+            wait(gpu);    % ensure it has completed
+        end
+
         matrix_matrix_multiplication_time = toc(matrix_matrix_multiplication_startime);
         fprintf('Matrix matrix multiplication: ......................... %fs\n', matrix_matrix_multiplication_time);
 
@@ -180,7 +192,10 @@ for GtimeLevel = 1:GnTimeLevels  % main time marching loop
         end
         GRPHI3 =GRPHI3+Gdt1^(m)/factorial(m)*GRphi3;
         
-        wait(gpu);    % ensure it has completed
+        if useGPU
+            wait(gpu);    % ensure it has completed
+        end
+        
         time_substep_time = toc(time_substep_starttime);
         fprintf('Time substep: ......................................... %fs\n', time_substep_time);
 
